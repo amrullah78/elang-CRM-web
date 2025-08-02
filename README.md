@@ -1,26 +1,14 @@
-# Elang CRM
+# Elang CRM Web
 
-Aplikasi CRM berbasis web untuk memantau kunjungan harian salesman.
+Aplikasi CRM kunjungan salesman berbasis web.
 
-## Fitur
-- Input kunjungan harian: tanggal, outlet, area, salesman, keterangan
-- Input PO dari outlet
-- Upload database outlet dan produk via CSV
-- Dashboard data kunjungan
-- Export Excel
-- Tampilan mobile friendly
+## Cara Deploy ke Vercel
 
-## Teknologi
-- Frontend: Vite + React
-- Deployment: GitHub + Vercel
+1. Upload folder `client` ini ke GitHub
+2. Di [vercel.com](https://vercel.com):
+   - Import dari GitHub
+   - Framework: Vite
+   - Root Directory: `client`
+   - Deploy
 
-## Cara Deploy (Manual)
-1. Upload semua file ke GitHub
-2. Login ke https://vercel.com
-3. Hubungkan GitHub repository Anda
-4. Pilih root directory: `client/`
-5. Deploy dan akses URL hasilnya
-
----
-
-© 2025 Elang CRM
+CRM akan langsung online!
