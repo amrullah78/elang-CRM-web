@@ -4,11 +4,11 @@ Aplikasi CRM kunjungan salesman berbasis web.
 
 ## Cara Deploy ke Vercel
 
-1. Upload folder `client` ini ke GitHub
-2. Di [vercel.com](https://vercel.com):
-   - Import dari GitHub
-   - Framework: Vite
-   - Root Directory: `client`
-   - Deploy
+1. Upload folder `client/` ini ke GitHub (bisa rename sesuai nama repo Anda).
+2. Deploy ke Vercel:
+   - Pilih framework: **Vite**
+   - Root directory: `client`
+   - Output directory: `dist`
+3. Jalankan dan akses URL dari Vercel.
 
-CRM akan langsung online!
+📁 Struktur sudah siap untuk Vercel deployment.
