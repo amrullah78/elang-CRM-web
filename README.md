@@ -1,14 +1,24 @@
-# Elang CRM Web
+# elang-CRM-web
 
-Aplikasi CRM kunjungan salesman berbasis web.
+Aplikasi frontend berbasis React + Vite.
 
-## Cara Deploy ke Vercel
+Quick start:
+1. Install dependencies
+   npm install
 
-1. Upload folder `client/` ini ke GitHub (bisa rename sesuai nama repo Anda).
-2. Deploy ke Vercel:
-   - Pilih framework: **Vite**
-   - Root directory: `client`
-   - Output directory: `dist`
-3. Jalankan dan akses URL dari Vercel.
+2. Development
+   npm run dev
+   Buka http://localhost:5173
 
-📁 Struktur sudah siap untuk Vercel deployment.
+3. Build production
+   npm run build
+   Hasil build akan ada di folder `dist`.
+
+4. Preview production build locally
+   npm run preview
+
+Deploy to Vercel:
+- Di dashboard Vercel, import repository ini.
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- (Atau gunakan vercel.json yang sudah disertakan; Vercel akan otomatis mendeteksi)
