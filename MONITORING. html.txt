@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Kunjungan Salesman (Multi-User)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-button.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            font-weight: 600;
+        }
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.4); 
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto; 
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%; 
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-header {
+            padding: 10px 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        /* Style untuk Tabel Kunjungan */
+        #visitTableContainer table { width: 100%; border-collapse: collapse; }
+        #visitTableContainer th, #visitTableContainer td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.875rem; /* text-sm */
+        }
+        #visitTableContainer th {
+            background-color: #f3f4f6; /* gray-100 */
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        /* Scrollbar untuk tabel */
+        #visitTableContainer {
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <div class="container mx-auto p-4 max-w-7xl">
+        <header class="bg-white shadow-md rounded-lg p-4 mb-4">
+            <h1 class="text-2xl font-bold text-blue-600">APLIKASI MONITORING KUNJUNGAN SALESMAN</h1>
+            <p class="text-sm text-gray-500 mt-1">Sistem Terpusat (Server Google Sheets)</p>
+        </header>
+
+        <div class="flex space-x-1 p-1 bg-white rounded-lg shadow-sm mb-4">
+            <button class="tab-button active p-3 rounded-md transition duration-200" onclick="showTab('catatKunjungan')">Catat Kunjungan</button>
+            <button class="tab-button p-3 rounded-md transition duration-200" onclick="showTab('rencanaKunjungan')">Rencana Kunjungan</button>
+            <button class="tab-button p-3 rounded-md transition duration-200" onclick="showTab('dataKunjungan')">Data Kunjungan</button>
+            <button class="tab-button p-3 rounded-md transition duration-200" onclick="showTab('adminMaster')">Master Data & Import</button>
+        </div>
+
+        <div id="catatKunjungan" class="tab-content active bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Formulir Kunjungan Harian</h2>
+            <form id="visitForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="tanggalKunjungan" class="block text-sm font-medium text-gray-700">Tanggal Kunjungan</label>
+                        <input type="date" id="tanggalKunjungan" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="namaSalesman" class="block text-sm font-medium text-gray-700">Nama Salesman</label>
+                        <select id="namaSalesman" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="" disabled selected>-- Pilih Salesman --</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Jika nama tidak ada, tambahkan di tab "Master Data"</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="namaOutlet" class="block text-sm font-medium text-gray-700">Nama Outlet</label>
+                        <select id="namaOutlet" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="" disabled selected>-- Pilih Outlet --</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Jika outlet tidak ada, tambahkan di tab "Master Data"</p>
+                    </div>
+                    <div>
+                        <label for="typeOutlet" class="block text-sm font-medium text-gray-700">Tipe Outlet</label>
+                        <input type="text" id="typeOutlet" readonly class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-50 text-gray-600">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="alamatOutlet" class="block text-sm font-medium text-gray-700">Alamat Outlet</label>
+                    <input type="text" id="alamatOutlet" readonly class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-50 text-gray-600">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="area" class="block text-sm font-medium text-gray-700">Area</label>
+                        <input type="text" id="area" readonly class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-50 text-gray-600">
+                    </div>
+                    <div>
+                        <label for="statusTransaksi" class="block text-sm font-medium text-gray-700">Status Transaksi</label>
+                        <select id="statusTransaksi" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="" disabled selected>-- Pilih Status --</option>
+                            <option value="Order">Order</option>
+                            <option value="Tidak Order">Tidak Order</option>
+                            <option value="Tutup/Libur">Tutup/Libur</option>
+                            <option value="Batal Kunjungan">Batal Kunjungan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="order" class="block text-sm font-medium text-gray-700">Nominal Order (Rp)</label>
+                        <input type="text" id="order" placeholder="Isi jika status 'Order'" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="keterangan" class="block text-sm font-medium text-gray-700">Keterangan Tambahan</label>
+                    <textarea id="keterangan" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">
+                    Simpan Kunjungan & Sinkronkan
+                </button>
+            </form>
+        </div>
+
+        <div id="rencanaKunjungan" class="tab-content bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Daftar Rencana Outlet (Berdasarkan Master)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="planAreaFilter" class="block text-sm font-medium text-gray-700">Filter Area</label>
+                    <select id="planAreaFilter" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <option value="all">Semua Area</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="planTypeFilter" class="block text-sm font-medium text-gray-700">Filter Tipe Outlet</label>
+                    <select id="planTypeFilter" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <option value="all">Semua Tipe</option>
+                    </select>
+                </div>
+            </div>
+
+            <p id="planNoDataMessage" class="text-center text-gray-500 hidden mt-4">Master Outlet masih kosong atau tidak ada data sesuai filter.</p>
+            <div id="planOutletList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                </div>
+        </div>
+
+        <div id="dataKunjungan" class="tab-content bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Riwayat Kunjungan (Data Sinkron)</h2>
+            
+            <button id="exportCsv" class="bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-2 px-4 rounded-md mb-4 transition duration-200">
+                Ekspor ke Excel (XLSX)
+            </button>
+
+            <div id="visitTableContainer" class="overflow-x-auto relative shadow-md sm:rounded-lg">
+                <p id="noDataMessage" class="text-center text-gray-500 p-4 hidden">Belum ada data kunjungan yang tercatat. Silakan input di tab "Catat Kunjungan".</p>
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" class="py-3 px-6 text-center">No.</th>
+                            <th scope="col" class="py-3 px-6">Tanggal</th>
+                            <th scope="col" class="py-3 px-6">Salesman</th>
+                            <th scope="col" class="py-3 px-6">Outlet</th>
+                            <th scope="col" class="py-3 px-6">Tipe</th>
+                            <th scope="col" class="py-3 px-6">Alamat</th>
+                            <th scope="col" class="py-3 px-6">Area</th>
+                            <th scope="col" class="py-3 px-6">Status</th>
+                            <th scope="col" class="py-3 px-6 text-right">Order</th>
+                            <th scope="col" class="py-3 px-6">Keterangan</th>
+                            <th scope="col" class="py-3 px-6">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="visitTableBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="adminMaster" class="tab-content bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Master Data Management</h2>
+
+            <div class="mb-6 border p-4 rounded-md bg-blue-50">
+                <h3 class="text-lg font-medium text-blue-700 mb-3">1. Tambah Salesman Baru</h3>
+                <form id="addSalesmanForm" class="flex gap-2">
+                    <input type="text" id="newSalesmanName" placeholder="Nama Salesman Baru" required class="flex-grow border border-gray-300 rounded-md shadow-sm p-2">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded-md">Tambah</button>
+                </form>
+                <p class="text-xs text-gray-500 mt-2">Atau Impor dari Excel/CSV:</p>
+                <input type="file" id="importSalesmanFile" accept=".csv, .xlsx" class="mt-2 block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
+            </div>
+
+            <div class="mb-6 border p-4 rounded-md bg-green-50">
+                <h3 class="text-lg font-medium text-green-700 mb-3">2. Tambah Outlet Baru</h3>
+                <form id="addOutletForm" class="space-y-3">
+                    <input type="text" id="newOutletName" placeholder="Nama Outlet" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                    <input type="text" id="newOutletAddress" placeholder="Alamat Outlet" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="newOutletArea" placeholder="Area Outlet (misal: Jakarta Selatan)" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <input type="text" id="newOutletType" placeholder="Tipe Outlet (misal: Grosir)" required class="block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Tambah Outlet</button>
+                </form>
+                <p class="text-xs text-gray-500 mt-2">Atau Impor dari Excel/CSV:</p>
+                <input type="file" id="importOutletFile" accept=".csv, .xlsx" class="mt-2 block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200">
+            </div>
+
+            <p class="text-sm text-gray-600 border-t pt-4">Catatan: Data master yang ditambahkan atau diimpor akan langsung tersimpan di Google Sheets dan tersedia untuk semua pengguna.</p>
+        </div>
+        
+    </div>
+
+    <div id="notificationModal" class="modal">
+        <div class="modal-content modal-shadow max-w-sm">
+            <div id="notificationModalHeader" class="modal-header rounded-t-lg !bg-blue-500 text-white p-3 -mt-5 -mx-5 mb-3">
+                <span class="close text-white opacity-80 hover:opacity-100" onclick="closeModal('notificationModal')">&times;</span>
+                <h4 id="notificationModalTitle" class="text-lg font-bold">Notifikasi</h4>
+            </div>
+            <p id="notificationModalMessage" class="text-gray-700"></p>
+            <div class="flex justify-end mt-4">
+                <button onclick="closeNotificationModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md">Tutup</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content max-w-sm">
+            <div class="modal-header !bg-red-500 text-white p-3 -mt-5 -mx-5 mb-3 rounded-t-lg">
+                <span class="close text-white opacity-80 hover:opacity-100" onclick="closeModal('deleteConfirmModal')">&times;</span>
+                <h4 class="text-lg font-bold">Konfirmasi Penghapusan</h4>
+            </div>
+            <p class="text-gray-700 mb-4">Anda yakin ingin menghapus data kunjungan ini? Tindakan ini tidak dapat dibatalkan.</p>
+            <div class="flex justify-end space-x-2">
+                <button onclick="closeModal('deleteConfirmModal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md">Batal</button>
+                <button id="confirmDeleteButton" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">Ya, Hapus Permanen</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // !!! GANTI INI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA !!!
+        const GAS_WEB_APP_URL = 'GANTI_DENGAN_URL_DEPLOYMENT_APPS_SCRIPT_ANDA';
+        
+        // Variabel global untuk menyimpan data yang diambil dari server
+        let salesmen = [];
+        let outlets = [];
+        let visits = [];
+        let visitToDeleteId = null; 
+        
+        // --- Helper Functions: Komunikasi dengan Google Apps Script (GAS) ---
+        async function fetchDataFromGas(sheetName) {
+            try {
+                const url = `${GAS_WEB_APP_URL}?sheet=${sheetName}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    return result.data;
+                } else {
+                    throw new Error(result.message || "Gagal memuat data dari Apps Script.");
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                showNotification("Error Server", `Gagal memuat data ${sheetName}. Pastikan URL Apps Script sudah benar dan ter-deploy. Detail: ${error.message}`, false);
+                return [];
+            }
+        }
+
+        async function sendDataToGas(sheetName, data) {
+            try {
+                const url = `${GAS_WEB_APP_URL}?sheet=${sheetName}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' 
+                    }
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    return true;
+                } else {
+                    throw new Error(result.message || "Gagal mengirim data ke Apps Script.");
+                }
+            } catch (error) {
+                console.error("Error sending data:", error);
+                showNotification("Error Server", `Gagal menyimpan data ${sheetName}. Detail: ${error.message}`, false);
+                return false;
+            }
+        }
+
+        async function deleteDataFromGas(sheetName, id) {
+            try {
+                // Apps Script hanya mendukung GET/POST, kita akan menggunakan GET dengan parameter 'method=DELETE'
+                const url = `${GAS_WEB_APP_URL}?sheet=${sheetName}&id=${id}&method=DELETE`; 
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    return true;
+                } else {
+                    throw new Error(result.message || "Gagal menghapus data.");
+                }
+            } catch (error) {
+                console.error("Error deleting data:", error);
+                showNotification("Error Server", `Gagal menghapus data. Detail: ${error.message}`, false);
+                return false;
+            }
+        }
+
+        // --- Fungsi untuk Modal & Notifikasi ---
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function showNotification(title, message, isSuccess = true) {
+            document.getElementById('notificationModalTitle').textContent = title;
+            document.getElementById('notificationModalMessage').textContent = message;
+            const modalHeader = document.getElementById('notificationModalHeader');
+            modalHeader.className = 'modal-header rounded-t-lg p-3 -mt-5 -mx-5 mb-3'; // Reset class
+            if (isSuccess === true) {
+                modalHeader.classList.add('!bg-blue-500');
+            } else if (isSuccess === false) {
+                modalHeader.classList.add('!bg-red-500');
+            } else {
+                modalHeader.classList.add('!bg-yellow-500');
+            }
+            openModal('notificationModal');
+        }
+
+        function closeNotificationModal() {
+            closeModal('notificationModal');
+        }
+
+        // --- Fungsi Kontrol Tab ---
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.tab-button[onclick*="${tabId}"]`).classList.add('active');
+
+            // Refresh tabel/list saat pindah tab
+            if (tabId === 'dataKunjungan') {
+                initialLoadVisits().then(renderVisitTable);
+            } else if (tabId === 'rencanaKunjungan') {
+                initialLoadMasterData().then(() => {
+                    populatePlanFilters();
+                    renderPlanList();
+                });
+            }
+        }
+
+
+        // --- Fungsi untuk Master Data (Salesman & Outlet) ---
+        async function initialLoadMasterData() {
+            salesmen = await fetchDataFromGas('Salesmen');
+            outlets = await fetchDataFromGas('Outlets');
+            
+            salesmen.sort((a, b) => a.nama_salesman.localeCompare(b.nama_salesman));
+            outlets.sort((a, b) => a.nama_outlet.localeCompare(b.nama_outlet));
+        }
+
+        function populateDropdowns() {
+            const salesmanSelect = document.getElementById('namaSalesman');
+            const outletSelect = document.getElementById('namaOutlet');
+
+            salesmanSelect.length = 1; 
+            outletSelect.length = 1;
+
+            salesmen.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.nama_salesman; 
+                option.textContent = s.nama_salesman;
+                salesmanSelect.appendChild(option);
+            });
+
+            outlets.forEach(o => {
+                const option = document.createElement('option');
+                option.value = o.nama_outlet; 
+                option.textContent = o.nama_outlet;
+                outletSelect.appendChild(option);
+            });
+        }
+        
+        document.getElementById('namaOutlet').addEventListener('change', function() {
+            const selectedOutletNama = this.value;
+            const alamatInput = document.getElementById('alamatOutlet');
+            const areaInput = document.getElementById('area');
+            const tipeInput = document.getElementById('typeOutlet');
+            
+            const outletData = outlets.find(o => o.nama_outlet === selectedOutletNama);
+            if (outletData) {
+                alamatInput.value = outletData.alamat_outlet || '';
+                areaInput.value = outletData.area_outlet || '';
+                tipeInput.value = outletData.type_outlet || '';
+            } else {
+                alamatInput.value = '';
+                areaInput.value = '';
+                tipeInput.value = '';
+            }
+        });
+
+        document.getElementById('addSalesmanForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const newName = document.getElementById('newSalesmanName').value.trim();
+            
+            if (!newName) { showNotification("Error", "Nama salesman tidak boleh kosong.", false); return; }
+            
+            const isExist = salesmen.some(s => s.nama_salesman.toLowerCase() === newName.toLowerCase());
+            if (isExist) { showNotification("Peringatan", "Nama salesman sudah ada.", null); return; }
+
+            // Format key harus sama persis dengan Header di Google Sheet
+            const dataToSend = { 'Nama Salesman': newName }; 
+            
+            if (await sendDataToGas('Salesmen', dataToSend)) {
+                await initialLoadMasterData();
+                populateDropdowns();
+                showNotification("Sukses", "Salesman baru berhasil ditambahkan.");
+                this.reset();
+            }
+        });
+
+        document.getElementById('addOutletForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const newName = document.getElementById('newOutletName').value.trim();
+            const newAddress = document.getElementById('newOutletAddress').value.trim();
+            const newArea = document.getElementById('newOutletArea').value.trim();
+            const newType = document.getElementById('newOutletType').value.trim();
+
+            if (!newName || !newAddress || !newArea || !newType) {
+                showNotification("Error", "Semua field outlet harus diisi.", false); return;
+            }
+            const isExist = outlets.some(o => o.nama_outlet.toLowerCase() === newName.toLowerCase());
+            if (isExist) { showNotification("Peringatan", "Nama outlet sudah ada.", null); return; }
+            
+            // Format key harus sama persis dengan Header di Google Sheet
+            const dataToSend = { 
+                'Nama Outlet': newName, 
+                'Alamat Outlet': newAddress, 
+                'Area Outlet': newArea, 
+                'Type Outlet': newType 
+            };
+            
+            if (await sendDataToGas('Outlets', dataToSend)) {
+                await initialLoadMasterData();
+                populateDropdowns();
+                populatePlanFilters();
+                renderPlanList();
+                showNotification("Sukses", "Outlet baru berhasil ditambahkan.");
+                this.reset();
+            }
+        });
+
+        // Fungsi Impor (Logika sama, hanya diperpendek)
+        async function processImport(file, sheetName, requiredHeaders) {
+            return new Promise((resolve, reject) => {
+                if (!file) { reject("Tidak ada file dipilih."); return; }
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, header: 1 });
+                        
+                        if (jsonData.length < 2) { reject("File kosong atau hanya berisi header."); return; }
+
+                        const fileHeaders = jsonData[0].map(h => h ? h.toString().trim() : '');
+                        const headerMap = requiredHeaders.map(req => {
+                            const index = fileHeaders.findIndex(h => h.toLowerCase().replace(/\s/g, '') === req.toLowerCase().replace(/\s/g, ''));
+                            if (index === -1) throw new Error(`Kolom header wajib: '${req}' tidak ditemukan.`);
+                            return { requiredName: req, columnIndex: index };
+                        });
+
+                        let importedCount = 0;
+                        let skippedCount = 0;
+                        for (let i = 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            const dataToSend = {};
+                            headerMap.forEach(map => {
+                                dataToSend[map.requiredName] = row[map.columnIndex] ? row[map.columnIndex].toString().trim() : '';
+                            });
+                            
+                            let isSkipped = false;
+                            if (sheetName === 'Salesmen' && salesmen.some(s => s.nama_salesman.toLowerCase() === dataToSend['Nama Salesman'].toLowerCase())) {
+                                isSkipped = true;
+                            } else if (sheetName === 'Outlets' && outlets.some(o => o.nama_outlet.toLowerCase() === dataToSend['Nama Outlet'].toLowerCase())) {
+                                isSkipped = true;
+                            }
+
+                            if (!isSkipped) {
+                                if (await sendDataToGas(sheetName, dataToSend)) {
+                                    importedCount++;
+                                } else {
+                                    skippedCount++;
+                                }
+                            } else {
+                                skippedCount++;
+                            }
+                        }
+                        
+                        await initialLoadMasterData(); 
+                        resolve({ importedCount, skippedCount });
+
+                    } catch (error) {
+                        reject(error.message);
+                    }
+                };
+                reader.onerror = () => reject("Gagal membaca file.");
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        document.getElementById('importSalesmanFile').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            const requiredHeaders = ['Nama Salesman'];
+            try {
+                const result = await processImport(file, 'Salesmen', requiredHeaders);
+                populateDropdowns();
+                showNotification("Info Impor Salesman", `${result.importedCount} salesman berhasil diimpor. ${result.skippedCount} dilewati.`, null);
+            } catch (error) {
+                showNotification("Error Impor", `Gagal memproses file. Pesan: ${error}`, false);
+            }
+            event.target.value = null;
+        });
+
+        document.getElementById('importOutletFile').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            const requiredHeaders = ['Nama Outlet', 'Alamat Outlet', 'Area Outlet', 'Type Outlet'];
+            try {
+                const result = await processImport(file, 'Outlets', requiredHeaders);
+                populateDropdowns();
+                populatePlanFilters();
+                renderPlanList();
+                showNotification("Info Impor Outlet", `${result.importedCount} outlet berhasil diimpor. ${result.skippedCount} dilewati.`, null);
+            } catch (error) {
+                showNotification("Error Impor", `Gagal memproses file. Pesan: ${error}`, false);
+            }
+            event.target.value = null;
+        });
+
+        
+        // --- Fungsi Rencana Kunjungan ---
+        function populatePlanFilters() {
+            const areaFilter = document.getElementById('planAreaFilter');
+            const typeFilter = document.getElementById('planTypeFilter');
+
+            const uniqueAreas = [...new Set(outlets.map(o => o.area_outlet))].filter(Boolean);
+            const uniqueTypes = [...new Set(outlets.map(o => o.type_outlet))].filter(Boolean);
+
+            areaFilter.length = 1;
+            typeFilter.length = 1;
+
+            uniqueAreas.sort().forEach(area => {
+                const option = document.createElement('option');
+                option.value = area;
+                option.textContent = area;
+                areaFilter.appendChild(option);
+            });
+
+            uniqueTypes.sort().forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeFilter.appendChild(option);
+            });
+        }
+
+        function renderPlanList() {
+            const selectedArea = document.getElementById('planAreaFilter').value;
+            const selectedType = document.getElementById('planTypeFilter').value;
+            const outletListContainer = document.getElementById('planOutletList');
+            const noDataMsg = document.getElementById('planNoDataMessage');
+            outletListContainer.innerHTML = '';
+
+            const filteredOutlets = outlets.filter(outlet => {
+                const areaMatch = selectedArea === 'all' || outlet.area_outlet === selectedArea;
+                const typeMatch = selectedType === 'all' || outlet.type_outlet === selectedType;
+                return areaMatch && typeMatch;
+            });
+            
+            if (filteredOutlets.length === 0) {
+                noDataMsg.style.display = 'block';
+                return;
+            }
+            noDataMsg.style.display = 'none';
+
+            filteredOutlets.forEach(outlet => {
+                const outletCard = document.createElement('div');
+                outletCard.className = 'border p-4 rounded-lg bg-gray-50 shadow-sm';
+                outletCard.innerHTML = `
+                    <h4 class="font-bold text-md text-blue-700">${outlet.nama_outlet}</h4>
+                    <p class="text-sm text-gray-600 mt-1">${outlet.alamat_outlet}</p>
+                    <div class="mt-2 flex justify-between items-center text-xs">
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">${outlet.area_outlet}</span>
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">${outlet.type_outlet}</span>
+                    </div>
+                `;
+                outletListContainer.appendChild(outletCard);
+            });
+        }
+        
+        document.getElementById('planAreaFilter').addEventListener('change', renderPlanList);
+        document.getElementById('planTypeFilter').addEventListener('change', renderPlanList);
+
+
+        // --- Fungsi Data Kunjungan (Visits) ---
+
+        async function initialLoadVisits() {
+            visits = await fetchDataFromGas('Visits');
+            visits.sort((a, b) => new Date(b.tanggal_kunjungan) - new Date(a.tanggal_kunjungan));
+        }
+        
+        function formatRupiah(number) {
+            if (typeof number === 'number') {
+                number = number.toString();
+            }
+            if (!number) return '';
+            let cleanNumber = number.replace(/[^0-9]/g, '').toString();
+            let rupiah = cleanNumber.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            return rupiah ? 'Rp ' + rupiah : '';
+        }
+
+        function parseRupiah(rupiahString) {
+            if (!rupiahString) return 0;
+            return parseInt(rupiahString.replace(/Rp\s?|\./g, '').replace(/,/g, '')) || 0;
+        }
+
+        document.getElementById('order').addEventListener('input', function(event) {
+            const value = this.value;
+            const numericValue = value.replace(/[^0-9]/g, ''); 
+            this.value = formatRupiah(parseInt(numericValue) || 0).replace('Rp ', '');
+        });
+        
+        document.getElementById('statusTransaksi').addEventListener('change', function() {
+            const orderInput = document.getElementById('order');
+            if (this.value === 'Order') {
+                orderInput.setAttribute('required', 'required');
+                orderInput.setAttribute('placeholder', 'Isi nominal order (wajib)');
+            } else {
+                orderInput.removeAttribute('required');
+                orderInput.value = '';
+                orderInput.setAttribute('placeholder', 'Isi jika status "Order"');
+            }
+        });
+
+
+        document.getElementById('visitForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const statusTransaksi = document.getElementById('statusTransaksi').value;
+            const orderRaw = document.getElementById('order').value;
+            
+            if (statusTransaksi === 'Order' && !orderRaw.replace(/[^0-9]/g, '')) {
+                showNotification("Error", "Nominal order wajib diisi jika status transaksi 'Order'.", false);
+                return;
+            }
+            
+            const nominalOrder = formatRupiah(parseRupiah(orderRaw));
+
+            const newVisit = {
+                // Key harus sama persis dengan Header di Google Sheet
+                'ID': 'V' + Date.now(), 
+                'Tanggal Kunjungan': document.getElementById('tanggalKunjungan').value,
+                'Salesman': document.getElementById('namaSalesman').value,
+                'Outlet': document.getElementById('namaOutlet').value,
+                'Type Outlet': document.getElementById('typeOutlet').value,
+                'Alamat Outlet': document.getElementById('alamatOutlet').value,
+                'Area': document.getElementById('area').value,
+                'Status Transaksi': statusTransaksi,
+                'Order': nominalOrder, 
+                'Keterangan': document.getElementById('keterangan').value
+            };
+
+            if (await sendDataToGas('Visits', newVisit)) {
+                await initialLoadVisits(); 
+                renderVisitTable();
+                showNotification("Sukses", "Data kunjungan berhasil dicatat dan disinkronkan!");
+                this.reset();
+                // Reset field otomatis
+                document.getElementById('typeOutlet').value = '';
+                document.getElementById('alamatOutlet').value = '';
+                document.getElementById('area').value = '';
+                document.getElementById('order').removeAttribute('required');
+                document.getElementById('order').setAttribute('placeholder', 'Isi jika status "Order"');
+                document.getElementById('tanggalKunjungan').valueAsDate = new Date(); 
+            }
+        });
+        
+        function renderVisitTable() {
+            const tableBody = document.getElementById('visitTableBody');
+            const noDataMsg = document.getElementById('noDataMessage');
+            tableBody.innerHTML = '';
+            
+            if (visits.length === 0) {
+                noDataMsg.style.display = 'block';
+                return;
+            }
+            noDataMsg.style.display = 'none';
+
+            visits.forEach((visit, index) => {
+                const row = tableBody.insertRow();
+                
+                const statusClass = 
+                    visit.status_transaksi === 'Order' ? 'bg-green-100 text-green-800' :
+                    visit.status_transaksi === 'Tidak Order' ? 'bg-red-100 text-red-800' :
+                    visit.status_transaksi === 'Batal Kunjungan' ? 'bg-gray-100 text-gray-800' :
+                    'bg-yellow-100 text-yellow-800';
+                
+                row.innerHTML = `
+                    <td class="text-center">${index + 1}</td>
+                    <td>${visit.tanggal_kunjungan}</td>
+                    <td>${visit.salesman}</td>
+                    <td>${visit.outlet}</td>
+                    <td>${visit.type_outlet}</td>
+                    <td>${visit.alamat_outlet}</td>
+                    <td>${visit.area}</td>
+                    <td><span class="inline-block px-2 py-1 text-xs font-semibold rounded ${statusClass}">${visit.status_transaksi}</span></td>
+                    <td class="whitespace-nowrap text-right">${visit.order || '-'}</td>
+                    <td class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">${visit.keterangan || '-'}</td>
+                    <td>
+                        <button onclick="openDeleteModal('${visit.id}')" class="text-red-600 hover:text-red-900 focus:outline-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 100 2v6a1 1 0 100-2V8z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </td>
+                `;
+            });
+        }
+
+        function openDeleteModal(id) {
+            visitToDeleteId = id;
+            openModal('deleteConfirmModal');
+        }
+
+        document.getElementById('confirmDeleteButton').addEventListener('click', async function() {
+            if (visitToDeleteId) {
+                if (await deleteDataFromGas('Visits', visitToDeleteId)) {
+                    await initialLoadVisits();
+                    renderVisitTable();
+                    showNotification("Sukses", "Data kunjungan berhasil dihapus dan disinkronkan.");
+                    closeModal('deleteConfirmModal');
+                    visitToDeleteId = null;
+                }
+            }
+        });
+
+        // --- Fungsi Export ke XLSX ---
+        document.getElementById('exportCsv').addEventListener('click', function() {
+            if (visits.length === 0) {
+                showNotification("Peringatan", "Tidak ada data kunjungan untuk diekspor.", null);
+                return;
+            }
+
+            const csvData = visits.map(visit => ({
+                "Tanggal Kunjungan": visit.tanggal_kunjungan,
+                "Salesman": visit.salesman,
+                "Outlet": visit.outlet,
+                "Type Outlet": visit.type_outlet,
+                "Alamat Outlet": visit.alamat_outlet,
+                "Area": visit.area,
+                "Status Transaksi": visit.status_transaksi,
+                "Order": visit.order,
+                "Keterangan": visit.keterangan
+            }));
+            
+            const worksheet = XLSX.utils.json_to_sheet(csvData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Kunjungan");
+
+            const today = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(workbook, `Data_Kunjungan_Salesman_${today}.xlsx`);
+            
+            showNotification("Sukses", "Data kunjungan berhasil diekspor ke Excel (XLSX).", true);
+        });
+
+
+        // --- Event Listeners untuk Modal & Initialization ---
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // --- Inisialisasi Aplikasi (Async) ---
+        async function initializeApp() {
+            document.getElementById('tanggalKunjungan').valueAsDate = new Date();
+            
+            showNotification("Memuat Data...", "Aplikasi sedang mengambil data master dan riwayat dari server (Google Sheets). Mohon tunggu.", 'warning');
+
+            await initialLoadMasterData();
+            await initialLoadVisits();
+
+            populateDropdowns();
+            populatePlanFilters();
+            renderPlanList();
+            renderVisitTable();
+
+            closeNotificationModal();
+            showNotification("Siap Digunakan!", `Aplikasi berhasil terhubung. ${visits.length} data kunjungan dimuat.`, true);
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
